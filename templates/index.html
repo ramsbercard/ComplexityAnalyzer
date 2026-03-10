@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Vision Pipeline Simulator</title>
+<style>
+body{
+    font-family: Arial;
+    margin:40px;
+    background-color: #f5f5f5;
+}
+input{
+    width:80px;
+    padding:5px;
+    margin:2px 0;
+}
+button{
+    padding:10px 15px;
+    margin-top:10px;
+    cursor:pointer;
+    background-color: #4CAF50;
+    color:white;
+    border:none;
+    border-radius:5px;
+    font-weight:bold;
+}
+button:hover{
+    background-color: #45a049;
+}
+.card{
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    padding:20px;
+    margin-top:20px;
+    max-width: 600px;
+}
+.card h3{
+    margin-top:0;
+}
+.result-section{
+    padding:10px;
+    border-radius:5px;
+    margin-top:10px;
+    min-height: 50px;
+    position: relative;
+}
+.pipeline-result{
+    background-color: #e0f7fa;
+}
+.complexity-result{
+    background-color: #fff3e0;
+}
+/* Spinner CSS */
+.spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #4CAF50;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 10px;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+/* Collapsible and table styling */
+.complexity-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 5px;
+}
+.complexity-table th, .complexity-table td {
+    padding: 6px;
+    text-align: left;
+    border-bottom: 1px solid #ccc;
+}
+.complexity-table th {
+    background-color: #f0f0f0;
+}
+details {
+    margin-bottom: 8px;
+}
+pre {
+    background-color: #f8f8f8;
+    padding: 5px;
+    border-radius: 5px;
+    overflow-x: auto;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Vision Pipeline Interactive Simulator</h2>
+<p>Modify parameters and run the pipeline.</p>
+
+<div class="card">
+    <label>Batch size (b): <input id="b" value="2"></label><br>
+    <label>Height (h): <input id="h" value="64"></label><br>
+    <label>Width (w): <input id="w" value="64"></label><br>
+    <label>Channels (c): <input id="c" value="3"></label><br>
+    <label>Layers (L): <input id="L" value="5"></label><br>
+    <label>Feature depth (d): <input id="d" value="3"></label><br>
+    <label>Proposals (p): <input id="p" value="10"></label><br>
+
+    <button onclick="runPipelineAndComplexity()">Run Pipeline & Complexity Analyzer</button>
+
+    <!-- Results sections -->
+    <div id="result" class="result-section pipeline-result">
+        <h3>Pipeline Results</h3>
+        <div id="pipelineContent">No data yet.</div>
+    </div>
+
+    <div id="complexityResult" class="result-section complexity-result">
+        <h3>Complexity Analysis</h3>
+        <div id="complexityContent">No data yet.</div>
+    </div>
+</div>
+
+<script>
+function runPipelineAndComplexity() {
+    const data = getInputData();
+
+    // Show spinner for pipeline
+    document.getElementById("pipelineContent").innerHTML = "Running pipeline <span class='spinner'></span>";
+    document.getElementById("complexityContent").innerHTML = "";
+
+    // Run pipeline
+    fetch("/run_pipeline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    })
+    .then(async res => {
+        const text = await res.text();
+        try {
+            const json = JSON.parse(text);
+            document.getElementById("pipelineContent").innerHTML =
+                "<strong>Detections:</strong> " + json.detections +
+                "<br><strong>Loss:</strong> " + json.loss;
+            return json;
+        } catch (e) {
+            document.getElementById("pipelineContent").innerHTML =
+                "Error parsing pipeline response:<br>" + text;
+            throw e;
+        }
+    })
+    .then(() => {
+        // Spinner for complexity
+        document.getElementById("complexityContent").innerHTML = "Analyzing complexity <span class='spinner'></span>";
+        return fetch("/run_complexity", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        });
+    })
+    .then(async res => {
+        const text = await res.text();
+        try {
+            const json = JSON.parse(text);
+
+            let html = "<div style='font-family: monospace; line-height:1.5em;'>";
+
+            // Metadata
+            if(json.complexity.metadata) {
+                html += "<strong>Metadata:</strong><br><pre>" + JSON.stringify(json.complexity.metadata, null, 2) + "</pre>";
+            }
+
+            // Input Symbols
+            if(json.complexity.input_symbols) {
+                html += "<strong>Input Symbols:</strong><br><pre>" + JSON.stringify(json.complexity.input_symbols, null, 2) + "</pre>";
+            }
+
+            // Assumptions
+            if(json.complexity.assumptions) {
+                html += "<strong>Assumptions:</strong><ul>";
+                json.complexity.assumptions.forEach(a => {
+                    html += `<li>${a}</li>`;
+                });
+                html += "</ul>";
+            }
+
+            // Components
+            if(json.complexity.components) {
+                html += "<strong>Components:</strong><br>";
+                for (const [compName, compData] of Object.entries(json.complexity.components)) {
+                    html += `<details><summary>${compName}</summary><pre>${JSON.stringify(compData, null, 2)}</pre></details>`;
+                }
+            }
+
+            html += "</div>";
+            document.getElementById("complexityContent").innerHTML = html;
+
+        } catch (e) {
+            document.getElementById("complexityContent").innerHTML =
+                "Error parsing complexity response:<br>" + text;
+        }
+    })
+    .catch(err => console.error("Error:", err));
+}
+
+function getInputData() {
+    return {
+        b: parseInt(document.getElementById("b").value),
+        h: parseInt(document.getElementById("h").value),
+        w: parseInt(document.getElementById("w").value),
+        c: parseInt(document.getElementById("c").value),
+        L: parseInt(document.getElementById("L").value),
+        d: parseInt(document.getElementById("d").value),
+        p: parseInt(document.getElementById("p").value)
+    };
+}
+</script>
+
+</body>
+</html>
