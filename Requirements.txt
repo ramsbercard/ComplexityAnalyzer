@@ -1,2 +1,7 @@
 Flask
 gunicorn
+ultralytics
+torch
+numpy
+pandas
+sympy
