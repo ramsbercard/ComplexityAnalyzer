@@ -1,0 +1,112 @@
+{
+    "metadata": {
+        "generated_by": "ComplexityAnalyzer v3.2",
+        "analysis_type": "static_symbolic_ast",
+        "target_file": "vision_pipeline.py"
+    },
+    "input_symbols": {
+        "n": "Number of images",
+        "b": "Batch size",
+        "h": "Image height",
+        "w": "Image width",
+        "c": "Number of classes",
+        "L": "Number of layers",
+        "p": "Number of region proposals",
+        "d": "Feature depth",
+        "k": "Kernel size"
+    },
+    "assumptions": [
+        "Worst-case bounds assumed",
+        "All loops execute to symbolic upper bound",
+        "Architecture depth L is symbolic",
+        "Dense tensor representation",
+        "Backprop mirrors forward pass",
+        "Static analysis only (no profiling)"
+    ],
+    "components": {
+        "preprocessing": {
+            "time": {
+                "O": "O(batch * i * j + batch * i + b + batch * i * j * ch)",
+                "Omega": "\u03a9(batch * i * j + batch * i + b + batch * i * j * ch)",
+                "Theta": "\u0398(batch * i * j + batch * i + b + batch * i * j * ch)"
+            },
+            "space": {
+                "O": "O(batch * i * j * ch)",
+                "Omega": "\u03a9(batch * i * j * ch)",
+                "Theta": "\u0398(batch * i * j * ch)"
+            }
+        },
+        "forward_pass_detection": {
+            "time": {
+                "O": "O(batch * i * j + batch * i + batch * i * j * depth + b)",
+                "Omega": "\u03a9(batch * i * j + batch * i + batch * i * j * depth + b)",
+                "Theta": "\u0398(batch * i * j + batch * i + batch * i * j * depth + b)"
+            },
+            "space": {
+                "O": "O(b * L * h * d)",
+                "Omega": "\u03a9(b * L * h * d)",
+                "Theta": "\u0398(b * L * h * d)"
+            }
+        },
+        "detection_head": {
+            "time": {
+                "O": "O(b)",
+                "Omega": "\u03a9(b)",
+                "Theta": "\u0398(b)"
+            },
+            "space": {
+                "O": "O(b * p * d)",
+                "Omega": "\u03a9(b * p * d)",
+                "Theta": "\u0398(b * p * d)"
+            }
+        },
+        "segmentation_head": {
+            "time": {
+                "O": "O(batch * i * j + batch * i + b)",
+                "Omega": "\u03a9(batch * i * j + batch * i + b)",
+                "Theta": "\u0398(batch * i * j + batch * i + b)"
+            },
+            "space": {
+                "O": "O(b * h * w * d)",
+                "Omega": "\u03a9(b * h * w * d)",
+                "Theta": "\u0398(b * h * w * d)"
+            }
+        },
+        "compute_loss": {
+            "time": {
+                "O": "O(b)",
+                "Omega": "\u03a9(b)",
+                "Theta": "\u0398(b)"
+            },
+            "space": {
+                "O": "O(1)",
+                "Omega": "\u03a9(1)",
+                "Theta": "\u0398(1)"
+            }
+        },
+        "backpropagation": {
+            "time": {
+                "O": "O(b)",
+                "Omega": "\u03a9(b)",
+                "Theta": "\u0398(b)"
+            },
+            "space": {
+                "O": "O(b * L * h * w * d)",
+                "Omega": "\u03a9(b * L * h * w * d)",
+                "Theta": "\u0398(b * L * h * w * d)"
+            }
+        },
+        "run_pipeline": {
+            "time": {
+                "O": "O(1)",
+                "Omega": "\u03a9(1)",
+                "Theta": "\u0398(1)"
+            },
+            "space": {
+                "O": "O(1)",
+                "Omega": "\u03a9(1)",
+                "Theta": "\u0398(1)"
+            }
+        }
+    }
+}
